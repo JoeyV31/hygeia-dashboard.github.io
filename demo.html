@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hygeia · No-Show Recovery Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --navy:#0B1F3A; --navy-2:#0F284A; --panel:#122C50; --panel-2:#16335C;
+    --line:rgba(201,168,76,0.18); --gold:#C9A84C; --gold-l:#DFC07A;
+    --white:#fff; --body:#C5D0DD; --muted:#8A9BB0; --green:#3FB984; --red:#E06A6A;
+    --serif:'Playfair Display',Georgia,serif; --sans:'DM Sans',system-ui,sans-serif;
+  }
+  body{font-family:var(--sans);background:var(--navy);color:var(--body);min-height:100vh;-webkit-font-smoothing:antialiased;}
+  .shell{max-width:1100px;margin:0 auto;padding:24px 20px 60px;}
+
+  /* top bar */
+  .top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:20px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+  .brand{font-family:var(--serif);font-size:1.3rem;color:var(--white);}
+  .brand span{color:var(--gold);}
+  .brand small{display:block;font-family:var(--sans);font-size:0.7rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-top:2px;}
+  .practice{display:flex;align-items:center;gap:10px;font-size:0.85rem;color:var(--body);}
+  .practice .pdot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px rgba(63,185,132,0.15);}
+  .badge{font-size:0.65rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);border:1px solid var(--line);padding:4px 10px;border-radius:20px;}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:22px 0;}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;}
+  .stat .label{font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);}
+  .stat .val{font-family:var(--serif);font-size:1.9rem;color:var(--white);margin-top:6px;line-height:1;transition:color .3s;}
+  .stat .val.flash{color:var(--gold);}
+  @media(max-width:720px){.stats{grid-template-columns:repeat(2,1fr);}}
+
+  /* control */
+  .control{display:flex;align-items:center;gap:14px;margin-bottom:22px;flex-wrap:wrap;}
+  .btn{font-family:var(--sans);font-size:0.85rem;font-weight:600;letter-spacing:0.04em;border:none;cursor:pointer;border-radius:6px;padding:12px 22px;transition:all .15s;}
+  .btn-go{background:var(--gold);color:var(--navy);}
+  .btn-go:hover:not(:disabled){background:var(--gold-l);transform:translateY(-1px);}
+  .btn-go:disabled{opacity:0.45;cursor:default;}
+  .btn-reset{background:transparent;border:1px solid var(--line);color:var(--muted);}
+  .btn-reset:hover{color:var(--white);border-color:var(--muted);}
+  .hint{font-size:0.8rem;color:var(--muted);}
+
+  /* main grid */
+  .grid{display:grid;grid-template-columns:1.15fr 1fr;gap:18px;}
+  @media(max-width:860px){.grid{grid-template-columns:1fr;}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;}
+  .panel h3{font-family:var(--sans);font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--gold);margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+
+  /* trigger card */
+  .trigger{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:16px;opacity:0;transform:translateY(8px);transition:all .4s;}
+  .trigger.show{opacity:1;transform:none;}
+  .miss-icon{flex:none;width:38px;height:38px;border-radius:50%;background:rgba(224,106,106,0.15);color:var(--red);display:grid;place-items:center;font-weight:700;font-size:1.1rem;}
+  .trigger .t{font-size:0.92rem;color:var(--white);font-weight:500;}
+  .trigger .s{font-size:0.78rem;color:var(--muted);}
+
+  /* phone thread */
+  .phone{background:var(--navy-2);border:1px solid var(--line);border-radius:14px;padding:14px;min-height:220px;}
+  .phone-hd{font-size:0.72rem;color:var(--muted);text-align:center;padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:12px;}
+  .bubble{max-width:80%;padding:10px 13px;border-radius:14px;font-size:0.86rem;line-height:1.45;margin-bottom:10px;opacity:0;transform:translateY(8px);transition:all .35s;}
+  .bubble.show{opacity:1;transform:none;}
+  .bubble.out{background:#1d63d6;color:#fff;margin-left:auto;border-bottom-right-radius:4px;}
+  .bubble.in{background:#213a5c;color:var(--white);border-bottom-left-radius:4px;}
+  .bubble .meta{display:block;font-size:0.66rem;opacity:0.7;margin-top:4px;}
+
+  /* call card */
+  .call{margin-top:16px;background:var(--panel-2);border:1px solid var(--line);border-radius:12px;padding:16px;opacity:0;transform:translateY(8px);transition:all .4s;}
+  .call.show{opacity:1;transform:none;}
+  .call-hd{display:flex;align-items:center;gap:12px;margin-bottom:14px;}
+  .sophie{flex:none;width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-l));color:var(--navy);display:grid;place-items:center;font-family:var(--serif);font-weight:600;}
+  .call-hd .who{font-size:0.92rem;color:var(--white);font-weight:600;}
+  .call-hd .role{font-size:0.74rem;color:var(--muted);}
+  .call-hd .live{margin-left:auto;font-size:0.66rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--green);display:flex;align-items:center;gap:6px;}
+  .call-hd .live .d{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.4s infinite;}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(63,185,132,.5);}70%{box-shadow:0 0 0 6px rgba(63,185,132,0);}100%{box-shadow:0 0 0 0 rgba(63,185,132,0);}}
+  .line{font-size:0.85rem;line-height:1.5;margin-bottom:9px;opacity:0;transform:translateY(6px);transition:all .3s;}
+  .line.show{opacity:1;transform:none;}
+  .line b{color:var(--gold);font-weight:600;}
+  .line.pt b{color:#8Fb4ff;}
+
+  /* success */
+  .success{margin-top:16px;background:rgba(63,185,132,0.1);border:1px solid rgba(63,185,132,0.4);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px;opacity:0;transform:translateY(8px);transition:all .4s;}
+  .success.show{opacity:1;transform:none;}
+  .success .ok{flex:none;width:32px;height:32px;border-radius:50%;background:var(--green);color:var(--navy);display:grid;place-items:center;font-weight:700;}
+  .success .t{font-size:0.9rem;color:var(--white);font-weight:600;}
+  .success .s{font-size:0.78rem;color:var(--body);}
+
+  /* feed */
+  .feed-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);}
+  .feed-item:last-child{border-bottom:none;}
+  .feed-item .fi-ic{flex:none;width:30px;height:30px;border-radius:50%;background:rgba(63,185,132,0.15);color:var(--green);display:grid;place-items:center;font-size:0.8rem;font-weight:700;}
+  .feed-item .fi-t{font-size:0.86rem;color:var(--white);}
+  .feed-item .fi-s{font-size:0.74rem;color:var(--muted);}
+  .feed-item .fi-amt{margin-left:auto;font-family:var(--serif);font-size:1rem;color:var(--green);}
+  .empty{font-size:0.84rem;color:var(--muted);font-style:italic;padding:10px 0;}
+
+  .foot{margin-top:26px;text-align:center;font-size:0.72rem;color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="top">
+    <div class="brand">Hyge<span>ia</span><small>No-Show Recovery</small></div>
+    <div style="display:flex;align-items:center;gap:14px;">
+      <div class="practice"><span class="pdot"></span>Eriks Dental Group · connected</div>
+      <span class="badge">Demo</span>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="label">Recovered this month</div><div class="val" id="s-count">14</div></div>
+    <div class="stat"><div class="label">Revenue recovered</div><div class="val" id="s-rev">$4,120</div></div>
+    <div class="stat"><div class="label">Rebook rate</div><div class="val">38%</div></div>
+    <div class="stat"><div class="label">Avg first contact</div><div class="val">15 min</div></div>
+  </div>
+
+  <div class="control">
+    <button class="btn btn-go" id="go">Simulate a no-show ▸</button>
+    <button class="btn btn-reset" id="reset">Reset</button>
+    <span class="hint" id="hint">Click to watch the system recover a missed appointment.</span>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <h3>Live recovery</h3>
+
+      <div class="trigger" id="trigger">
+        <div class="miss-icon">!</div>
+        <div>
+          <div class="t" id="trig-name">Sarah Mitchell missed her appointment</div>
+          <div class="s" id="trig-sub">2:00 PM · Hygiene Cleaning · flagged by front desk</div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="phone-hd">Messages with Sarah · from Eriks Dental Group</div>
+        <div id="thread"></div>
+      </div>
+
+      <div class="call" id="call">
+        <div class="call-hd">
+          <div class="sophie">S</div>
+          <div>
+            <div class="who">Sophie</div>
+            <div class="role">AI phone assistant · Eriks Dental Group</div>
+          </div>
+          <div class="live"><span class="d"></span>On call</div>
+        </div>
+        <div id="transcript"></div>
+      </div>
+
+      <div class="success" id="success">
+        <div class="ok">✓</div>
+        <div>
+          <div class="t">Rebooked · Thursday 10:00 AM</div>
+          <div class="s">Chair refilled. Confirmation text sent. <b style="color:var(--green)">+$285 recovered.</b></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Recent recoveries</h3>
+      <div id="feed">
+        <div class="feed-item"><div class="fi-ic">✓</div><div><div class="fi-t">Daniel Reyes</div><div class="fi-s">Rebooked by Sophie · crown prep</div></div><div class="fi-amt">+$640</div></div>
+        <div class="feed-item"><div class="fi-ic">✓</div><div><div class="fi-t">Priya Shah</div><div class="fi-s">Replied to text · cleaning</div></div><div class="fi-amt">+$210</div></div>
+        <div class="feed-item"><div class="fi-ic">✓</div><div><div class="fi-t">Marcus Bell</div><div class="fi-s">Rebooked by Sophie · filling</div></div><div class="fi-amt">+$320</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">Demo environment · sample patients and figures shown for illustration. Built by Hygeia for Eriks Dental Group.</div>
+</div>
+
+<script>
+(function(){
+  const go=document.getElementById('go'), reset=document.getElementById('reset'), hint=document.getElementById('hint');
+  const trigger=document.getElementById('trigger'), thread=document.getElementById('thread');
+  const call=document.getElementById('call'), transcript=document.getElementById('transcript');
+  const success=document.getElementById('success'), feed=document.getElementById('feed');
+  const sCount=document.getElementById('s-count'), sRev=document.getElementById('s-rev');
+  let count=14, rev=4120, timers=[];
+
+  const sms=[
+    {cls:'out',txt:"Hi Sarah, this is Eriks Dental Group. We missed you at your 2:00 cleaning today — no problem at all. Want to grab a new time? Just reply here.",meta:"Sent 15 min after the miss"},
+    {cls:'out',txt:"Hi Sarah, following up from Eriks Dental. We'd love to get you back in this week — Thursday and Friday are open. Want me to hold one?",meta:"Sent next morning · no reply yet"}
+  ];
+  const talk=[
+    {who:'Sophie',cls:'',txt:"Hi, is this Sarah? It's Sophie calling from Eriks Dental Group. We missed you at your cleaning and I wanted to help you find a new time. Is now okay?"},
+    {who:'Sarah',cls:'pt',txt:"Oh — yeah, sorry, I meant to call back."},
+    {who:'Sophie',cls:'',txt:"No worries at all. I have Thursday at 10 AM or Friday at 2 PM. Do either work for you?"},
+    {who:'Sarah',cls:'pt',txt:"Thursday at 10 works."},
+    {who:'Sophie',cls:'',txt:"Perfect — you're booked Thursday at 10 with the hygienist. You'll get a text confirmation shortly. Thanks Sarah, see you then!"}
+  ];
+
+  function t(fn,ms){const id=setTimeout(fn,ms);timers.push(id);}
+  function clearAll(){timers.forEach(clearTimeout);timers=[];}
+
+  function run(){
+    go.disabled=true; hint.textContent="Recovering…";
+    clearAll(); thread.innerHTML=''; transcript.innerHTML='';
+    trigger.classList.remove('show'); call.classList.remove('show'); success.classList.remove('show');
+
+    t(()=>trigger.classList.add('show'),200);
+
+    // text 1
+    t(()=>addBubble(sms[0]),1100);
+    // text 2
+    t(()=>addBubble(sms[1]),2400);
+    // call begins
+    t(()=>{call.classList.add('show'); hint.textContent="No reply to texts → Sophie calls.";},3700);
+    // transcript lines
+    talk.forEach((l,i)=>t(()=>addLine(l),4400+i*1300));
+    // success
+    const end=4400+talk.length*1300+400;
+    t(()=>{
+      success.classList.add('show');
+      count++; rev+=285;
+      flash(sCount,count); flash(sRev,'$'+rev.toLocaleString());
+      addFeed('Sarah Mitchell','Rebooked by Sophie · cleaning','+$285');
+      hint.textContent="Recovered. Chair refilled, revenue back.";
+      go.disabled=false; go.textContent="Simulate another ▸";
+    },end);
+  }
+
+  function addBubble(m){
+    const b=document.createElement('div');
+    b.className='bubble '+m.cls;
+    b.innerHTML=m.txt+'<span class="meta">'+m.meta+'</span>';
+    thread.appendChild(b); requestAnimationFrame(()=>b.classList.add('show'));
+  }
+  function addLine(l){
+    const d=document.createElement('div');
+    d.className='line '+l.cls;
+    d.innerHTML='<b>'+l.who+':</b> '+l.txt;
+    transcript.appendChild(d); requestAnimationFrame(()=>d.classList.add('show'));
+  }
+  function addFeed(name,sub,amt){
+    const d=document.createElement('div');
+    d.className='feed-item'; d.style.opacity=0;
+    d.innerHTML='<div class="fi-ic">✓</div><div><div class="fi-t">'+name+'</div><div class="fi-s">'+sub+'</div></div><div class="fi-amt">'+amt+'</div>';
+    feed.insertBefore(d,feed.firstChild);
+    requestAnimationFrame(()=>{d.style.transition='opacity .4s';d.style.opacity=1;});
+  }
+  function flash(el,v){el.textContent=v;el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),900);}
+
+  function doReset(){
+    clearAll(); thread.innerHTML=''; transcript.innerHTML='';
+    trigger.classList.remove('show'); call.classList.remove('show'); success.classList.remove('show');
+    count=14; rev=4120; sCount.textContent='14'; sRev.textContent='$4,120';
+    go.disabled=false; go.textContent="Simulate a no-show ▸"; hint.textContent="Click to watch the system recover a missed appointment.";
+  }
+
+  go.addEventListener('click',run);
+  reset.addEventListener('click',doReset);
+})();
+</script>
+</body>
+</html>
